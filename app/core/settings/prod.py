@@ -9,13 +9,26 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 DEBUG = False
 
-ALLOWED_HOSTS = ["datasetapp-production-c46d.up.railway.app"]
+_allowed_hosts = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+_railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+if _railway_domain:
+    _allowed_hosts.append(_railway_domain)
+ALLOWED_HOSTS = _allowed_hosts or [".up.railway.app"]
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://datasetapp-production-c46d.up.railway.app",
+_csrf_origins = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
 ]
+if _railway_domain:
+    _csrf_origins.append(f"https://{_railway_domain}")
+CSRF_TRUSTED_ORIGINS = _csrf_origins
 
 # HTTPS settings
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

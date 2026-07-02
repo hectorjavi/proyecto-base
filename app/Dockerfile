@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Shared base ───────────────────────────────────────────────────────────────
-FROM python:3.13-slim-bookworm AS base
+FROM python:3.13-slim AS base
 
 WORKDIR /usr/src/app
 

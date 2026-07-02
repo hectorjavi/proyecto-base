@@ -1,13 +1,14 @@
 [build]
-builder = "dockerfile"
+builder = "DOCKERFILE"
+# Build context must be app/ — set Root Directory = app in Railway service settings.
 dockerfilePath = "app/Dockerfile"
-# Production stage — no dev linters in the deployed image.
-dockerfileTarget = "production"
 buildCommand = ""
 
 [deploy]
 # Railway injects PORT automatically; the entrypoint reads it via ${PORT:-8000}.
-# Set PRODUCTION=1 and DATABASE_URL (linked Postgres) in Railway service variables.
+# Required variables: PRODUCTION=1, SECRET_KEY, DATABASE_URL=${{Postgres.DATABASE_URL}}
 startCommand = ""
-restartPolicyType = "on_failure"
+healthcheckPath = "/health/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
