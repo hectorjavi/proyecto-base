@@ -47,17 +47,11 @@ CLOUDINARY_API_SECRET=your-api-secret
 # Django
 PRODUCTION=0
 SECRET_KEY=generate-key-here_CHANGE-THIS
-
-# PostgreSQL
-DATABASE=postgres
-POSTGRES_HOST=web-db
-POSTGRES_PORT=5432
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB_NAME=web_db
 ```
 
-> **Nota:** Para producción, actualiza `SECRET_KEY`, las credenciales de Cloudinary y configura `PRODUCTION=1`.
+Postgres (`POSTGRES_*`) está en `docker-compose.yml`. En Railway usa solo `DATABASE_URL`.
+
+> **Nota:** Para producción en Railway: `PRODUCTION=1`, `SECRET_KEY` y `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
 
 ### 2. Construir y levantar los contenedores
 
@@ -142,13 +136,13 @@ proyecto-base/
 │   │   └── docs.py             # Configuración de Swagger
 │   ├── utils/                  # Permisos, paginación, excepciones
 │   ├── .agents/skills/         # Skills de IA para agentes (Django)
-│   ├── Dockerfile              # Multi-stage: dev | production
 │   ├── requirements/
 │   │   ├── base.txt            # Runtime (prod)
 │   │   ├── dev.txt             # + linters
 │   │   └── prod.txt
 │   ├── requirements.txt        # → dev.txt (compat)
 │   └── manage.py
+├── Dockerfile                  # Multi-stage: dev | production
 ├── .github/workflows/ci.yml    # Lint + migrate + health probe
 ├── AGENTS.md                   # Convenciones para agentes IA
 ├── docker-compose.yml
@@ -268,8 +262,9 @@ En CI (GitHub Actions) corre automáticamente el workflow `.github/workflows/ci.
 Cada push/PR a `master` o `main` ejecuta `.github/workflows/ci.yml`:
 
 - `flake8`, `black --check`, `isort --check-only`
-- `python manage.py check` y `migrate`
-- Probe HTTP a `GET /health`
+- `python manage.py check` y `check --deploy` (prod settings)
+- Build imagen `production` + smoke test `GET /health`
+- Probe HTTP dev en `GET /health`
 
 Reproduce localmente:
 
@@ -294,6 +289,18 @@ Railway construye el `Dockerfile` de la raíz (target `production`). Producción
 - Base de datos vía `DATABASE_URL` (Postgres vinculado)
 - `healthcheck.railway.app` permitido en `ALLOWED_HOSTS`
 
+### Arquitectura de despliegue
+
+```
+GitHub push
+    → Railway build (Dockerfile · target production)
+    → preDeployCommand: migrate
+    → wait_for_db (DATABASE_URL)
+    → collectstatic + gunicorn ($PORT)
+    → healthcheck GET /health
+    → proyecto-base-production.up.railway.app
+```
+
 ### Railway — configuración mínima
 
 **Build:** Root Directory vacío · Dockerfile Path = `Dockerfile`
@@ -305,9 +312,10 @@ Railway construye el `Dockerfile` de la raíz (target `production`). Producción
 | `PRODUCTION` | `1` |
 | `SECRET_KEY` | clave segura |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+| `CORS_ALLOWED_ORIGINS` | opcional — orígenes del frontend (ej. `https://app.example.com`) |
 | `CLOUDINARY_*` | si usas media |
 
-No uses `POSTGRES_*` ni `DATABASE` en Railway (son de desarrollo local).
+`RAILWAY_PUBLIC_DOMAIN` se añade automáticamente a CORS y CSRF si Railway lo inyecta. No uses `POSTGRES_*` ni `DATABASE` en Railway (son de desarrollo local).
 
 **Networking:** Generate Domain → probar `https://<tu-app>.up.railway.app/health`
 

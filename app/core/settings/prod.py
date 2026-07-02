@@ -1,11 +1,14 @@
 import os
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 from ..logging import *  # noqa
 from .base import *  # noqa
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY environment variable is required.")
 
 DEBUG = False
 
@@ -22,7 +25,14 @@ if _railway_domain:
 _allowed_hosts.extend(_RAILWAY_HOSTS)
 ALLOWED_HOSTS = _allowed_hosts or [".up.railway.app"]
 
-CORS_ALLOW_ALL_ORIGINS = True
+_cors_origins = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if _railway_domain:
+    _cors_origins.append(f"https://{_railway_domain}")
+CORS_ALLOWED_ORIGINS = _cors_origins
 
 _csrf_origins = [
     origin.strip()

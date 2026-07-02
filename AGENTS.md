@@ -29,8 +29,12 @@ docker compose exec web python manage.py migrate
 docker compose exec web python manage.py check
 ```
 
-- Env file: `.env.dev` (plantilla: `.env.dev-exemple`)
-- Postgres host en compose: `web-db`
+- Env file: `.env.dev` (plantilla: `.env.dev-exemple`) — secretos y Cloudinary
+- Postgres en compose: `POSTGRES_*` definidos en `docker-compose.yml` (no en `.env.dev`)
+- Detección dev/prod en entrypoint: `POSTGRES_HOST` → local · sin `POSTGRES_HOST` → Railway
+- Railway: `preDeployCommand` migra antes del deploy; entrypoint omite migrate si `RAILWAY_ENVIRONMENT` está definido
+- Imagen base Python pinneada por digest (re-pin periódico)
+- Compose `web`: `security_opt: no-new-privileges`
 - Collectstatic en dev: solo si `COLLECT_STATIC=1`
 - Dev volumes: opcional en `docker-compose.dev.yml` (no se auto-carga)
 - `wait_for_db.py` vive en `/usr/local/bin/` (no lo pisa el bind mount)
@@ -64,4 +68,4 @@ docker compose exec web black . --check
 docker compose exec web isort . --check-only
 ```
 
-CI: `.github/workflows/ci.yml` (flake8, black, isort, `manage.py check`, `GET /health`).
+CI: `.github/workflows/ci.yml` (flake8, black, isort, `manage.py check`, `check --deploy`, build production + smoke `/health`).

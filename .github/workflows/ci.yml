@@ -42,6 +42,43 @@ jobs:
       - name: Django check
         run: docker compose run --rm --no-deps --entrypoint python web manage.py check
 
+      - name: Django deploy check (production settings)
+        run: |
+          docker compose run --rm --no-deps \
+            -e DJANGO_SETTINGS_MODULE=core.settings.prod \
+            -e SECRET_KEY=ci-secret-key-not-for-production-use-only \
+            -e DATABASE_URL=postgres://postgres:postgres@web-db:5432/web_db \
+            -e ALLOWED_HOSTS=localhost \
+            --entrypoint python web manage.py check --deploy
+
+      - name: Build production image
+        run: docker build -f Dockerfile --target production -t proyecto-base-prod-ci .
+
+      - name: Smoke test production image
+        run: |
+          docker network create proyecto-base-ci 2>/dev/null || true
+          docker rm -f web-db-ci web-prod-ci 2>/dev/null || true
+          docker run -d --name web-db-ci --network proyecto-base-ci \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=web_db \
+            postgres:16-bookworm
+          for i in $(seq 1 30); do
+            docker run --rm --network proyecto-base-ci postgres:16-bookworm \
+              pg_isready -h web-db-ci -U postgres -d web_db && break
+            sleep 2
+          done
+          docker run -d --name web-prod-ci --network proyecto-base-ci -p 8001:8000 \
+            -e SECRET_KEY=ci-secret-key-not-for-production-use-only \
+            -e DATABASE_URL=postgres://postgres:postgres@web-db-ci:5432/web_db \
+            proyecto-base-prod-ci
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8001/health && exit 0
+            sleep 2
+          done
+          docker logs web-prod-ci
+          exit 1
+
       - name: Apply migrations (smoke)
         run: docker compose run --rm --no-deps --entrypoint python web manage.py migrate --no-input
 

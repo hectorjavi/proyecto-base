@@ -15,8 +15,14 @@ fi
 python /usr/local/bin/wait_for_db.py
 
 if production_mode; then
+    if [ "$#" -gt 0 ]; then
+        exec "$@"
+    fi
+
     echo "Running in Production Mode"
-    python manage.py migrate --no-input --settings=core.settings.prod
+    if [ -z "${RAILWAY_ENVIRONMENT:-}" ]; then
+        python manage.py migrate --no-input --settings=core.settings.prod
+    fi
     python manage.py collectstatic --no-input --settings=core.settings.prod
     exec gunicorn -w "${GUNICORN_WORKERS:-1}" \
         --timeout "${GUNICORN_TIMEOUT:-120}" \

@@ -8,6 +8,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+CORS_ALLOW_ALL_ORIGINS = True
+
 # Database
 POSTGRES_DB = {
     "ENGINE": "django.db.backends.postgresql",

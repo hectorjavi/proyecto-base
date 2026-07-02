@@ -2,7 +2,8 @@
 # Single Dockerfile — Railway (production) and docker-compose (dev).
 
 # ── Shared base ───────────────────────────────────────────────────────────────
-FROM python:3.13-slim AS base
+# Pin linux/amd64 digest (python:3.13.14-slim-bookworm). Re-pin on a schedule.
+FROM python:3.13-slim-bookworm@sha256:129f9f5d5729767916d79f0021ba4fe56ff113332b08ef1213ecf529a9da7ebb AS base
 
 WORKDIR /usr/src/app
 
@@ -30,7 +31,8 @@ FROM base AS dev
 RUN pip install --upgrade pip wheel
 
 COPY app/requirements/base.txt app/requirements/dev.txt requirements/
-RUN pip install --no-cache-dir -r requirements/dev.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements/dev.txt
 
 COPY app/ .
 
@@ -50,7 +52,8 @@ FROM base AS production
 RUN pip install --upgrade pip wheel
 
 COPY app/requirements/base.txt requirements/
-RUN pip install --no-cache-dir -r requirements/base.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements/base.txt
 
 COPY app/ .
 

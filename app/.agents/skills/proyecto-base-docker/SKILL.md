@@ -32,7 +32,7 @@ paths:
 | Service | Image / build | Host port | Notes |
 |---|---|---|---|
 | `web` | `context: .` **target `dev`** | 8000 | Healthcheck `GET /health` |
-| `web-db` | `postgres:16-bookworm` | 5436→5432 | Named volume `pgdata` |
+| `web-db` | `postgres:16-bookworm` | 5436→5432 | Named volume `pgdata`, network `proyecto-base` |
 
 **Important:** `.env.dev` must use `POSTGRES_HOST=web-db` (Docker DNS service name).
 
@@ -68,7 +68,11 @@ docker compose down -v && docker compose up -d --build
 | Mode | Trigger | Image target | Behavior |
 |---|---|---|---|
 | Development | `POSTGRES_HOST` set (compose) | `dev` | `wait_for_db` → `migrate` → **gunicorn --reload** |
-| Production | no `POSTGRES_HOST` (Railway) | `production` | `wait_for_db` → `migrate` → `collectstatic` → gunicorn |
+| Production | no `POSTGRES_HOST` (Railway) | `production` | `wait_for_db` → `collectstatic` → gunicorn |
+
+**Railway migrations:** `preDeployCommand` in `railway.toml` runs `migrate` before deploy. On Railway (`RAILWAY_ENVIRONMENT` set), the entrypoint skips migrate at startup. For manual prod runs without Railway, migrate still runs in the entrypoint.
+
+**Entrypoint passthrough:** If arguments are passed in production mode (e.g. Railway pre-deploy), the entrypoint runs them directly (`exec "$@"`).
 
 **Collectstatic in dev:** skipped by default. Set `COLLECT_STATIC=1` to force it.
 
@@ -112,7 +116,9 @@ SECRET_KEY=<secure-key>
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 ```
 
-Optional: Cloudinary vars. Do **not** set `POSTGRES_*` or `DATABASE` in Railway — use `DATABASE_URL` only.
+Optional: `CORS_ALLOWED_ORIGINS=https://your-frontend.example` (auto-adds `RAILWAY_PUBLIC_DOMAIN`). Cloudinary vars. Do **not** set `POSTGRES_*` or `DATABASE` in Railway — use `DATABASE_URL` only.
+
+**Pre-deploy:** `railway.toml` runs `migrate` via `preDeployCommand` before each deploy.
 
 **Networking:** Generate Domain in Settings → Networking.
 
@@ -120,5 +126,7 @@ Optional: Cloudinary vars. Do **not** set `POSTGRES_*` or `DATABASE` in Railway 
 
 1. Load `docker-patterns` skill for generic best practices.
 2. Keep a single `Dockerfile` at repo root (`context: .`).
-3. Use `depends_on: condition: service_healthy` for `web-db`.
-4. Never commit `.env.dev` — only `.env.dev-exemple`.
+3. Pin base image digests on a schedule (`python:3.13-slim-bookworm@sha256:...`).
+4. Use `security_opt: no-new-privileges` on `web` in compose.
+5. Use `depends_on: condition: service_healthy` for `web-db`.
+6. Never commit `.env.dev` — only `.env.dev-exemple`.
