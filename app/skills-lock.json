@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "cdrf-expert": {
+      "source": "vintasoftware/django-ai-plugins",
+      "sourceType": "github",
+      "skillPath": "plugins/cdrf-expert/skills/SKILL.md",
+      "computedHash": "7721f912dccc51c2b06934c2de58e456dc5498b6e996cb30cf3ef1c992f28377"
+    },
+    "django-expert": {
+      "source": "vintasoftware/django-ai-plugins",
+      "sourceType": "github",
+      "skillPath": "plugins/django-expert/skills/SKILL.md",
+      "computedHash": "48918a76e3f070c0cbd13a70324bf1c4d2cc8251f33a27055a4e432312a3ac0c"
+    },
+    "django-safe-migration": {
+      "source": "vintasoftware/django-ai-plugins",
+      "sourceType": "github",
+      "skillPath": "plugins/django-safe-migration/skills/django-safe-migration/SKILL.md",
+      "computedHash": "d878022f8bd9cc70922065e3f225f2d4134b6ac932b34c65d1a0d1e6a32d9ad1"
+    }
+  }
+}

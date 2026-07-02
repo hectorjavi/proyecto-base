@@ -1,0 +1,70 @@
+import os
+
+import dj_database_url
+
+from ..logging import *  # noqa
+from .base import *  # noqa
+
+SECRET_KEY = os.environ.get("SECRET_KEY")
+
+DEBUG = False
+
+ALLOWED_HOSTS = ["datasetapp-production-c46d.up.railway.app"]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://datasetapp-production-c46d.up.railway.app",
+]
+
+# HTTPS settings
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# ── Database ──────────────────────────────────────────────────────────────────
+# Railway injects DATABASE_URL automatically when a Postgres service is linked.
+# Set it in Railway service variables as: DATABASE_URL = ${{Postgres.DATABASE_URL}}
+#
+# Fallback: individual POSTGRES_* vars for other environments.
+# Passwords with special characters are safe because Django's backend uses
+# keyword args internally — no manual URL building here.
+_database_url = os.environ.get("DATABASE_URL")
+
+if _database_url:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            _database_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "HOST": os.environ.get("POSTGRES_HOST"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+            "USER": os.environ.get("POSTGRES_USER"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+            "NAME": os.environ.get("POSTGRES_DB_NAME"),
+            "CONN_MAX_AGE": 60,
+        }
+    }
+
+STATIC_ROOT = BASE_DIR / "staticfiles"  # noqa
+
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    "API_KEY": os.environ.get("CLOUDINARY_API_KEY"),
+    "API_SECRET": os.environ.get("CLOUDINARY_API_SECRET"),
+}

@@ -1,0 +1,11 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "app/Dockerfile"
+buildCommand = ""
+
+[deploy]
+# Railway injects PORT automatically; the entrypoint reads it via ${PORT:-8000}.
+# Set PRODUCTION=1 and DATABASE_URL (linked Postgres) in Railway service variables.
+startCommand = ""
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
