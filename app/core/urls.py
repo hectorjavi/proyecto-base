@@ -26,6 +26,7 @@ admin_urls = [
 ]
 
 docs_urls = [
+    path("health", health.health, name="health-no-slash"),
     path("health/", health.health, name="health"),
     path(
         "docs/",

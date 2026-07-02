@@ -320,6 +320,12 @@ Elimina la variable `RAILWAY_DOCKERFILE_PATH` si existe y apunta a `app/Dockerfi
 
 Variables requeridas: `PRODUCTION=1`, `SECRET_KEY`, `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
 
+### Networking y healthcheck
+
+1. **Generate Domain** en **Settings → Networking** (el servicio no debe quedar como "Unexposed").
+2. Railway hace healthcheck con `Host: healthcheck.railway.app` — ya está en `ALLOWED_HOSTS` de `prod.py`.
+3. El path de healthcheck es `/health` (configurado en `railway.toml`).
+
 ---
 
 ## Skills para agentes IA
