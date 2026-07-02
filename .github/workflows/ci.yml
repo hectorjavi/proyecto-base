@@ -82,6 +82,9 @@ jobs:
       - name: Apply migrations (smoke)
         run: docker compose run --rm --no-deps --entrypoint python web manage.py migrate --no-input
 
+      - name: Django tests
+        run: docker compose run --rm --no-deps --entrypoint python web manage.py test core --verbosity=2
+
       - name: Start web and health probe
         run: |
           docker compose up -d web

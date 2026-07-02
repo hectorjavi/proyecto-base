@@ -1,4 +1,3 @@
-from django.contrib.auth.hashers import make_password
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -12,6 +11,8 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
 )
+
+from utils.api.throttling import AuthAnonRateThrottle, PasswordChangeUserRateThrottle
 
 from apps.models.user.api.serializers import UserSerializer
 from core.swagger_schemas import (
@@ -162,6 +163,7 @@ class LoginView(TokenObtainPairView):
     """Obtiene un par de tokens JWT (access + refresh) a cambio de credenciales."""
 
     serializers_class = TokenObtainPairSerializer
+    throttle_classes = [AuthAnonRateThrottle]
 
     @swagger_auto_schema(
         operation_id="auth_token_obtain",
@@ -327,6 +329,7 @@ class UserMePassView(APIView):
     """Cambio de contraseña del usuario autenticado."""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [PasswordChangeUserRateThrottle]
 
     @swagger_auto_schema(
         operation_id="auth_me_change_password",
@@ -348,7 +351,10 @@ class UserMePassView(APIView):
         tags=_TAG,
     )
     def post(self, request):
-        serializer_data = serializers.UserMeUpdatePssSerializer(data=request.data)
+        serializer_data = serializers.UserMeUpdatePssSerializer(
+            data=request.data,
+            context={"request": request},
+        )
         serializer_data.is_valid(raise_exception=True)
 
         user = request.user
@@ -361,7 +367,7 @@ class UserMePassView(APIView):
                 data={"current_password": ["Contraseña incorrecta."]},
             )
 
-        user.password = make_password(new_password)
+        user.set_password(new_password)
         user.save(update_fields=["password"])
 
         return Response({}, status=status.HTTP_200_OK)

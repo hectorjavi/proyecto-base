@@ -26,17 +26,42 @@ API REST construida con Django 5.2 LTS, PostgreSQL y Docker. Incluye autenticaci
 
 ---
 
-## Instalación y puesta en marcha (desarrollo)
+## Variables de entorno
 
-### 1. Configurar variables de entorno
+El proyecto separa configuración por entorno. **Nunca commitees** `.env.dev` (solo la plantilla `.env.dev-exemple`).
 
-Copia el archivo de ejemplo y ajusta los valores si es necesario:
+### Resumen
+
+| Entorno | Dónde se definen | Settings Django | Cómo arranca |
+|---|---|---|---|
+| **Desarrollo** | `.env.dev` + `docker-compose.yml` | `core.settings.local` | `POSTGRES_HOST=web-db` → modo dev |
+| **Producción (Railway)** | Variables del servicio en Railway | `core.settings.prod` | Sin `POSTGRES_HOST`, solo `DATABASE_URL` |
+
+El entrypoint detecta el modo así: si existe `POSTGRES_HOST` → desarrollo; si no → producción.
+
+---
+
+### Desarrollo local
+
+#### 1. Crear `.env.dev`
 
 ```bash
 cp .env.dev-exemple .env.dev
 ```
 
-El archivo `.env.dev` contiene los siguientes valores por defecto listos para desarrollo local:
+#### 2. Variables en `.env.dev` (tu máquina)
+
+| Variable | ¿Obligatoria? | Descripción | Ejemplo |
+|---|---|---|---|
+| `SECRET_KEY` | **Sí** | Clave Django (mín. ~50 caracteres recomendado) | `django-insecure-dev-...` o generada |
+| `CLOUDINARY_CLOUD_NAME` | Sí* | Cuenta Cloudinary | `your-cloud-name` |
+| `CLOUDINARY_API_KEY` | Sí* | API key Cloudinary | `your-api-key` |
+| `CLOUDINARY_API_SECRET` | Sí* | API secret Cloudinary | `your-api-secret` |
+| `PRODUCTION` | No | Convención documental (`0` en dev) | `0` |
+
+\* Obligatorias si usas subida de archivos/media. Sin credenciales válidas, las operaciones con media pueden fallar.
+
+**Plantilla mínima (`.env.dev`):**
 
 ```env
 # Cloudinary
@@ -46,12 +71,132 @@ CLOUDINARY_API_SECRET=your-api-secret
 
 # Django
 PRODUCTION=0
-SECRET_KEY=generate-key-here_CHANGE-THIS
+SECRET_KEY=cambia-esto-por-una-clave-larga-y-aleatoria-de-al-menos-50-chars
 ```
 
-Postgres (`POSTGRES_*`) está en `docker-compose.yml`. En Railway usa solo `DATABASE_URL`.
+Generar `SECRET_KEY`:
 
-> **Nota:** Para producción en Railway: `PRODUCTION=1`, `SECRET_KEY` y `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
+```bash
+docker compose run --rm --no-deps --entrypoint python web -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+#### 3. Variables en `docker-compose.yml` (no duplicar en `.env.dev`)
+
+Compose inyecta Postgres y flags de entorno al servicio `web`:
+
+| Variable | Valor por defecto | Uso |
+|---|---|---|
+| `POSTGRES_HOST` | `web-db` | Host del contenedor Postgres |
+| `POSTGRES_PORT` | `5432` | Puerto interno |
+| `POSTGRES_USER` | `postgres` | Usuario BD |
+| `POSTGRES_PASSWORD` | `postgres` | Contraseña BD |
+| `POSTGRES_DB_NAME` | `web_db` | Nombre de la base |
+| `PRODUCTION` | `0` | Marcador de entorno dev |
+| `DJANGO_SETTINGS_MODULE` | `core.settings.local` | Settings (vía comando gunicorn) |
+
+Postgres del servicio `web-db` usa `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (mismos valores).
+
+**No definas `DATABASE_URL` en desarrollo local** — el entrypoint y `local.py` usan `POSTGRES_*`.
+
+#### 4. Variables opcionales (desarrollo)
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `COLLECT_STATIC` | `0` | `1` fuerza `collectstatic` en cada arranque |
+| `WAIT_DB_VERBOSE` | `0` | `1` muestra reintentos de conexión a BD |
+| `WAIT_DB_MAX_RETRIES` | `60` | Reintentos máximos antes de fallar |
+| `CREATE_DEFAULT_SUPERUSER` | — | `1` crea usuario `test@gmail.com` aunque `DEBUG=False` |
+
+#### 5. No usar en desarrollo local
+
+| Variable | Motivo |
+|---|---|
+| `DATABASE_URL` | Reservada para Railway/producción |
+| `POSTGRES_*` en `.env.dev` | Ya están en `docker-compose.yml`; duplicar genera confusión |
+| `ALLOWED_HOSTS`, `CORS_*` | En dev: `ALLOWED_HOSTS=*`, CORS abierto en `local.py` |
+
+---
+
+### Producción (Railway)
+
+Settings: `core.settings.prod` · Imagen Docker: target `production`.
+
+#### Variables obligatorias
+
+| Variable | Valor en Railway | Descripción |
+|---|---|---|
+| `SECRET_KEY` | Clave larga y aleatoria | Sin esto Django no arranca |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | URL al vincular el servicio Postgres |
+
+`DATABASE_URL` la inyecta Railway al enlazar Postgres. Configúrala en **Variables** del servicio web:
+
+```
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+```
+
+#### Variables recomendadas (Cloudinary)
+
+| Variable | Descripción |
+|---|---|
+| `CLOUDINARY_CLOUD_NAME` | Mismo que en dev, con credenciales de prod |
+| `CLOUDINARY_API_KEY` | API key de producción |
+| `CLOUDINARY_API_SECRET` | API secret de producción |
+
+#### Variables opcionales (producción)
+
+| Variable | Descripción | Ejemplo |
+|---|---|---|
+| `PRODUCTION` | Convención (`1` en prod) | `1` |
+| `ALLOWED_HOSTS` | Hosts extra (coma-separados) | `mi-dominio.com,api.mi-dominio.com` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes frontend permitidos | `https://app.ejemplo.com` |
+| `CSRF_TRUSTED_ORIGINS` | Orígenes CSRF (si aplica) | `https://app.ejemplo.com` |
+| `GUNICORN_WORKERS` | Workers gunicorn | `2` |
+| `GUNICORN_TIMEOUT` | Timeout en segundos | `120` |
+
+Railway suele inyectar automáticamente:
+
+| Variable | Uso en el proyecto |
+|---|---|
+| `RAILWAY_PUBLIC_DOMAIN` | Se añade a `ALLOWED_HOSTS`, CORS y CSRF |
+| `RAILWAY_ENVIRONMENT` | Omite `migrate` en arranque (lo hace `preDeployCommand`) |
+| `PORT` | Puerto donde escucha gunicorn |
+
+`healthcheck.railway.app` y `.up.railway.app` ya están contemplados en `prod.py`.
+
+#### No usar en Railway
+
+| Variable | Motivo |
+|---|---|
+| `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB_NAME` | Usa solo `DATABASE_URL` |
+| `DATABASE` | Legacy; no se usa en este proyecto |
+| Bind mounts / `.env.dev` | Railway usa variables del dashboard, no archivos locales |
+
+#### Ejemplo — panel Railway (servicio web)
+
+```
+SECRET_KEY=<genera-una-clave-segura>
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+PRODUCTION=1
+
+CLOUDINARY_CLOUD_NAME=<tu-cloud>
+CLOUDINARY_API_KEY=<tu-key>
+CLOUDINARY_API_SECRET=<tu-secret>
+
+# Solo si tienes frontend en otro dominio:
+CORS_ALLOWED_ORIGINS=https://tu-frontend.ejemplo.com
+```
+
+---
+
+## Instalación y puesta en marcha (desarrollo)
+
+### 1. Configurar variables de entorno
+
+```bash
+cp .env.dev-exemple .env.dev
+```
+
+Edita `.env.dev` con tu `SECRET_KEY` y credenciales Cloudinary. Los detalles están en [Variables de entorno → Desarrollo local](#desarrollo-local).
 
 ### 2. Construir y levantar los contenedores
 
@@ -74,15 +219,17 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 | Django Admin | http://localhost:8000/admin/ |
 | PostgreSQL (externo) | `localhost:5436` |
 
-### 4. Credenciales del administrador por defecto
+### 4. Usuario de prueba (solo desarrollo)
 
-Se crean automáticamente tras la primera migración (`post_migrate`):
+Con `DEBUG=True` (settings local), tras la primera migración se crea un superusuario de conveniencia:
 
 ```
 Email:    test@gmail.com
 Usuario:  test
 Password: test
 ```
+
+En producción **no** se crea. Para forzarlo en otro entorno: `CREATE_DEFAULT_SUPERUSER=1` (solo dev/staging).
 
 ---
 
@@ -123,11 +270,11 @@ proyecto-base/
 ├── app/
 │   ├── apps/
 │   │   ├── auths/              # JWT, perfil propio (auth/me)
-│   │   │   ├── user/           # Login, refresh, blacklist, me
-│   │   │   └── group/          # Grupos (extensible)
+│   │   │   └── user/           # Login, refresh, blacklist, me
 │   │   └── models/
 │   │       └── user/           # Modelo User custom + CRUD API
 │   ├── core/
+│   │   ├── tests/              # Tests API (auth, users, health)
 │   │   ├── settings/
 │   │   │   ├── base.py         # Configuración base
 │   │   │   ├── local.py        # Desarrollo
@@ -263,6 +410,7 @@ Cada push/PR a `master` o `main` ejecuta `.github/workflows/ci.yml`:
 
 - `flake8`, `black --check`, `isort --check-only`
 - `python manage.py check` y `check --deploy` (prod settings)
+- `python manage.py test core` (18 tests API/auth)
 - Build imagen `production` + smoke test `GET /health`
 - Probe HTTP dev en `GET /health`
 
@@ -305,17 +453,17 @@ GitHub push
 
 **Build:** Root Directory vacío · Dockerfile Path = `Dockerfile`
 
-**Variables:**
+Variables detalladas en [Variables de entorno → Producción (Railway)](#producción-railway). Mínimo:
 
 | Variable | Valor |
 |---|---|
-| `PRODUCTION` | `1` |
-| `SECRET_KEY` | clave segura |
+| `SECRET_KEY` | clave segura (50+ caracteres) |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
-| `CORS_ALLOWED_ORIGINS` | opcional — orígenes del frontend (ej. `https://app.example.com`) |
-| `CLOUDINARY_*` | si usas media |
+| `CLOUDINARY_*` | si usas media en prod |
 
-`RAILWAY_PUBLIC_DOMAIN` se añade automáticamente a CORS y CSRF si Railway lo inyecta. No uses `POSTGRES_*` ni `DATABASE` en Railway (son de desarrollo local).
+Opcional: `CORS_ALLOWED_ORIGINS`, `ALLOWED_HOSTS`, `PRODUCTION=1`.
+
+`RAILWAY_PUBLIC_DOMAIN` se añade automáticamente a CORS y CSRF si Railway lo inyecta.
 
 **Networking:** Generate Domain → probar `https://<tu-app>.up.railway.app/health`
 

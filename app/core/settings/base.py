@@ -30,10 +30,12 @@ BASE_APPS = [
 ]
 
 LOCAL_APPS = [
+    "core",
     "apps.models.user",
 ]
 
 THIRD_APPS = [
+    "django_filters",
     "dbbackup",
     "cloudinary",
     "cloudinary_storage",
@@ -93,6 +95,10 @@ REST_FRAMEWORK = {
     # handle fine-grained ACL (e.g. HasUserPermissionUser on the user viewset).
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "EXCEPTION_HANDLER": "utils.api.exception_handlers.custom_exception_handler",
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": "20/minute",
+        "password_change": "10/hour",
+    },
 }
 
 AUTH_USER_MODEL = "user.User"

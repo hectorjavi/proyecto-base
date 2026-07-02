@@ -1,4 +1,6 @@
-from django.contrib.auth.hashers import make_password
+import os
+
+from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.db.models.signals import post_migrate
 from django.dispatch import receiver
@@ -18,11 +20,11 @@ def create_default_user():
             "accepted_terms": True,
             "is_superuser": True,
             "is_staff": True,
-            "password": make_password("test"),
         },
     )
 
     if created:
+        user.set_password("test")
         all_permissions = Permission.objects.all()
         user.user_permissions.set(all_permissions)
         user.save()
@@ -30,5 +32,8 @@ def create_default_user():
 
 @receiver(post_migrate)
 def create(sender, **kwargs):
-    if isinstance(sender, UserConfig):
-        create_default_user()
+    if not isinstance(sender, UserConfig):
+        return
+    if not (settings.DEBUG or os.environ.get("CREATE_DEFAULT_SUPERUSER") == "1"):
+        return
+    create_default_user()

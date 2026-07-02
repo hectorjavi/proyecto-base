@@ -10,6 +10,7 @@ from core.swagger_schemas import (
     r403_forbidden,
     r404_not_found,
 )
+from utils.api.pagination import CustomPagination
 from utils.permissions import FullModelPermissions
 
 from .. import models
@@ -38,7 +39,8 @@ _user_list_item_schema = openapi.Schema(
         "paternal_last_name": openapi.Schema(type=openapi.TYPE_STRING),
         "maternal_last_name": openapi.Schema(type=openapi.TYPE_STRING),
         "email": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL),
-        "gender": openapi.Schema(type=openapi.TYPE_STRING, example="Masculino"),
+        "gender": openapi.Schema(type=openapi.TYPE_STRING, example="M"),
+        "gender_display": openapi.Schema(type=openapi.TYPE_STRING, example="Masculino"),
         "phone": openapi.Schema(type=openapi.TYPE_STRING),
         "address": openapi.Schema(type=openapi.TYPE_STRING),
         "accepted_terms": openapi.Schema(type=openapi.TYPE_BOOLEAN),
@@ -119,7 +121,8 @@ _user_list_200 = openapi.Response(
                     "paternal_last_name": "Pérez",
                     "maternal_last_name": "García",
                     "email": "juan@example.com",
-                    "gender": "Masculino",
+                    "gender": "M",
+                    "gender_display": "Masculino",
                     "phone": "999888777",
                     "address": "Lima",
                     "accepted_terms": True,
@@ -267,8 +270,8 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [FullModelPermissions]
     serializer_class = serializers.UserSerializer
     http_method_names = ["post", "get", "patch", "put", "delete"]
-    pagination_class = serializers.CustomPagination
-    queryset = models.User.objects.all().order_by("email")
+    pagination_class = CustomPagination
+    queryset = models.User.objects.none()
 
     filter_backends = (
         filters.SearchFilter,
@@ -297,6 +300,13 @@ class UserViewSet(viewsets.ModelViewSet):
         "first_name",
         "username",
     ]
+
+    def get_queryset(self):
+        return (
+            models.User.objects.all()
+            .order_by("email")
+            .prefetch_related("groups", "user_permissions")
+        )
 
     def get_serializer_class(self):
         if self.action == "create":

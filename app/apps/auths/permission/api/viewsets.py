@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Permission
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
@@ -77,7 +78,7 @@ class PermissionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = serializers.PermissionSerializer
     http_method_names = ["get"]
-    queryset = serializers.Permission.objects.exclude(
+    queryset = Permission.objects.exclude(
         Q(codename__icontains="Logentry")
         | Q(codename__icontains="session")
         | Q(codename__icontains="contenttype")

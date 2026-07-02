@@ -1,8 +1,14 @@
 import os
 
+from django.core.exceptions import ImproperlyConfigured
+
 from .base import *  # noqa
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "SECRET_KEY environment variable is required. Copy .env.dev-exemple to .env.dev."
+    )
 
 DEBUG = True
 

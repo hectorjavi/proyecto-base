@@ -68,4 +68,4 @@ docker compose exec web black . --check
 docker compose exec web isort . --check-only
 ```
 
-CI: `.github/workflows/ci.yml` (flake8, black, isort, `manage.py check`, `check --deploy`, build production + smoke `/health`).
+CI: `.github/workflows/ci.yml` (flake8, black, isort, `manage.py check`, `check --deploy`, `manage.py test core`, build production + smoke `/health`).

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.models.user.models import User
+from utils.auth import validate_password_strength
 
 
 class UserMeUpdateSerializer(serializers.ModelSerializer):
@@ -29,6 +30,11 @@ class UserMeUpdatePssSerializer(serializers.Serializer):
         help_text="New user password.",
         write_only=True,
     )
+
+    def validate_new_password(self, value):
+        user = self.context.get("request").user if self.context.get("request") else None
+        validate_password_strength(value, user=user)
+        return value
 
     def validate(self, data):
         if data["current_password"] == data["new_password"]:

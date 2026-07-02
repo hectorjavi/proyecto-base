@@ -1,16 +1,15 @@
-from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 
 from apps.auths.group.api.serializers import GroupSerializer
 from apps.auths.permission.api.serializers import PermissionSerializer
 from apps.models.user.models import User
-from utils.api.pagination import CustomPagination  # noqa: F401
+from utils.auth import validate_password_strength
 
 
 class UserSerializer(serializers.ModelSerializer):
     groups = GroupSerializer(many=True, read_only=True)
     user_permissions = PermissionSerializer(many=True, read_only=True)
-    gender = serializers.CharField(source="get_gender_display", read_only=True)
+    gender_display = serializers.CharField(source="get_gender_display", read_only=True)
 
     class Meta:
         model = User
@@ -22,6 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
             "maternal_last_name",
             "email",
             "gender",
+            "gender_display",
             "phone",
             "address",
             "accepted_terms",
@@ -55,8 +55,17 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     def validate_password(self, password):
         if password:
-            password = make_password(password)
+            validate_password_strength(password, user=self.instance)
         return password
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -83,7 +92,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created", "modified")
 
     def validate_password(self, password):
-        return make_password(password)
+        validate_password_strength(password)
+        return password
 
     def validate_accepted_terms(self, value):
         if value is not True:
@@ -91,3 +101,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
                 "Debe aceptar los términos y condiciones."
             )
         return value
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
