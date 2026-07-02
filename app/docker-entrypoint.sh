@@ -8,7 +8,7 @@ set -e
 python /usr/local/bin/wait_for_db.py
 
 # ── Apply migrations and start the server ────────────────────────────────────
-if [ "${PRODUCTION:-0}" -eq 1 ]; then
+_run_production() {
     echo "Running in Production Mode"
     python manage.py migrate --no-input --settings=core.settings.prod
     python manage.py collectstatic --no-input --settings=core.settings.prod
@@ -20,6 +20,11 @@ if [ "${PRODUCTION:-0}" -eq 1 ]; then
         --env DJANGO_SETTINGS_MODULE=core.settings.prod \
         core.wsgi:application \
         --bind "0.0.0.0:${PORT:-8000}"
+}
+
+# Railway leaves startCommand empty — no CMD means $# is 0, so start gunicorn.
+if [ "${PRODUCTION:-0}" -eq 1 ] || [ $# -eq 0 ]; then
+    _run_production
 else
     echo "Running in Developer Mode"
     python manage.py migrate --no-input --verbosity 0

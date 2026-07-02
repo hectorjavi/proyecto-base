@@ -17,6 +17,8 @@ _allowed_hosts = [
 _railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
 if _railway_domain:
     _allowed_hosts.append(_railway_domain)
+if os.environ.get("RAILWAY_ENVIRONMENT"):
+    _allowed_hosts.extend(["localhost", "127.0.0.1"])
 ALLOWED_HOSTS = _allowed_hosts or [".up.railway.app"]
 
 CORS_ALLOW_ALL_ORIGINS = True
