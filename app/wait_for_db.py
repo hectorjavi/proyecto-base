@@ -16,7 +16,21 @@ import time
 
 import psycopg2
 
-MAX_RETRIES = 60
+MAX_RETRIES = int(os.environ.get("WAIT_DB_MAX_RETRIES", "120"))
+
+
+def _require_database_config() -> None:
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        return
+    if os.environ.get("POSTGRES_HOST"):
+        return
+    print(
+        "ERROR: DATABASE_URL is not set. "
+        "In Railway, link Postgres and set DATABASE_URL=${{Postgres.DATABASE_URL}}.",
+        flush=True,
+    )
+    sys.exit(1)
 
 
 def _connect():
@@ -37,6 +51,7 @@ def _connect():
 
 
 def wait_for_db() -> None:
+    _require_database_config()
     verbose = os.environ.get("WAIT_DB_VERBOSE", "0") == "1"
     database_url = os.environ.get("DATABASE_URL")
     if database_url:

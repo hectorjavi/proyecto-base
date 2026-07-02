@@ -5,6 +5,8 @@
 # ── Shared base ───────────────────────────────────────────────────────────────
 FROM python:3.13-slim AS base
 
+ARG RAILWAY_GIT_COMMIT_SHA=unknown
+
 WORKDIR /usr/src/app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -48,6 +50,9 @@ ENTRYPOINT ["bash", "/usr/local/bin/docker-entrypoint.sh"]
 
 # ── Production (default target for Railway) ───────────────────────────────────
 FROM base AS production
+
+ARG RAILWAY_GIT_COMMIT_SHA=unknown
+RUN echo "Railway build revision: ${RAILWAY_GIT_COMMIT_SHA}"
 
 RUN pip install --upgrade pip wheel
 
