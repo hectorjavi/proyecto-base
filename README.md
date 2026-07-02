@@ -296,6 +296,30 @@ El entorno de producción se configura mediante la variable `PRODUCTION=1`. Rail
 - CORS habilitado
 - Base de datos vía `DATABASE_URL` (inyectada por Railway al vincular Postgres)
 
+### Configuración de build en Railway (importante)
+
+El log debe mostrar `load build definition from Dockerfile` (raíz del repo), **no** `app/Dockerfile`.
+
+En **Settings → Build** del servicio web:
+
+| Campo | Valor correcto |
+|---|---|
+| Root Directory | *(vacío)* |
+| Dockerfile Path | `Dockerfile` |
+
+Si el dashboard sigue usando `app/Dockerfile`, el build falla con `requirements/base.txt not found`.
+
+**Alternativa válida** (si prefieres el Dockerfile dentro de `app/`):
+
+| Campo | Valor |
+|---|---|
+| Root Directory | `app` |
+| Dockerfile Path | `Dockerfile` |
+
+Elimina la variable `RAILWAY_DOCKERFILE_PATH` si existe y apunta a `app/Dockerfile`.
+
+Variables requeridas: `PRODUCTION=1`, `SECRET_KEY`, `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
+
 ---
 
 ## Skills para agentes IA
