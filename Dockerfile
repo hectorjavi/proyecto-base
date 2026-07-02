@@ -1,11 +1,8 @@
 # syntax=docker/dockerfile:1
-# Repo-root Dockerfile for Railway (build context = repository root).
-# Local development uses app/Dockerfile via docker-compose (context = ./app).
+# Single Dockerfile — Railway (production) and docker-compose (dev).
 
 # ── Shared base ───────────────────────────────────────────────────────────────
 FROM python:3.13-slim AS base
-
-ARG RAILWAY_GIT_COMMIT_SHA=unknown
 
 WORKDIR /usr/src/app
 
@@ -21,14 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd --gid 1000 appgroup \
     && useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
 
-# ── Shared runtime scripts (outside /usr/src/app — safe with bind mounts) ─────
 COPY app/docker-entrypoint.sh app/wait_for_db.py /tmp/runtime-scripts/
 RUN dos2unix /tmp/runtime-scripts/docker-entrypoint.sh /tmp/runtime-scripts/wait_for_db.py \
     && mv /tmp/runtime-scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh \
     && mv /tmp/runtime-scripts/wait_for_db.py /usr/local/bin/wait_for_db.py \
     && chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/wait_for_db.py
 
-# ── Development ───────────────────────────────────────────────────────────────
+# ── Development (docker-compose target: dev) ──────────────────────────────────
 FROM base AS dev
 
 RUN pip install --upgrade pip wheel
@@ -44,15 +40,12 @@ RUN mkdir -p media staticfiles static \
 USER appuser
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/health/')" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/health')" || exit 1
 
 ENTRYPOINT ["bash", "/usr/local/bin/docker-entrypoint.sh"]
 
-# ── Production (default target for Railway) ───────────────────────────────────
+# ── Production (Railway default — last stage) ─────────────────────────────────
 FROM base AS production
-
-ARG RAILWAY_GIT_COMMIT_SHA=unknown
-RUN echo "Railway build revision: ${RAILWAY_GIT_COMMIT_SHA}"
 
 RUN pip install --upgrade pip wheel
 
@@ -67,6 +60,6 @@ RUN mkdir -p media staticfiles static \
 USER appuser
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/health/')" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/health')" || exit 1
 
 ENTRYPOINT ["bash", "/usr/local/bin/docker-entrypoint.sh"]

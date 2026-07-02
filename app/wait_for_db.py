@@ -1,14 +1,8 @@
 #!/usr/bin/env python
 """
-Waits for the database to be ready before starting the application.
+Wait for the database before starting the application.
 
-Connection priority:
-  1. DATABASE_URL  — Railway / Heroku / any PaaS (injected automatically)
-  2. Individual POSTGRES_* env vars — local docker-compose fallback
-
-Uses psycopg2 keyword arguments when falling back to individual vars so that
-passwords with special characters (@, /, #, ?) are handled correctly without
-URL-encoding issues.
+Priority: DATABASE_URL (Railway/PaaS) → POSTGRES_* (local docker-compose).
 """
 import os
 import sys
@@ -16,31 +10,13 @@ import time
 
 import psycopg2
 
-MAX_RETRIES = int(os.environ.get("WAIT_DB_MAX_RETRIES", "120"))
-
-
-def _require_database_config() -> None:
-    database_url = os.environ.get("DATABASE_URL")
-    if database_url:
-        return
-    if os.environ.get("POSTGRES_HOST"):
-        return
-    print(
-        "ERROR: DATABASE_URL is not set. "
-        "In Railway, link Postgres and set DATABASE_URL=${{Postgres.DATABASE_URL}}.",
-        flush=True,
-    )
-    sys.exit(1)
+MAX_RETRIES = int(os.environ.get("WAIT_DB_MAX_RETRIES", "60"))
 
 
 def _connect():
-    """Return an open psycopg2 connection using available env vars."""
     database_url = os.environ.get("DATABASE_URL")
-
     if database_url:
         return psycopg2.connect(database_url)
-
-    # Use keyword args to safely handle passwords with special characters.
     return psycopg2.connect(
         host=os.environ.get("POSTGRES_HOST", "localhost"),
         port=int(os.environ.get("POSTGRES_PORT", "5432")),
@@ -51,11 +27,12 @@ def _connect():
 
 
 def wait_for_db() -> None:
-    _require_database_config()
-    verbose = os.environ.get("WAIT_DB_VERBOSE", "0") == "1"
     database_url = os.environ.get("DATABASE_URL")
+    if not database_url and not os.environ.get("POSTGRES_HOST"):
+        print("ERROR: Set DATABASE_URL or POSTGRES_HOST.", flush=True)
+        sys.exit(1)
+
     if database_url:
-        # Mask credentials for safe logging
         safe = database_url.split("@")[-1] if "@" in database_url else database_url
         print(f"Waiting for database at {safe} ...", flush=True)
     else:
@@ -63,6 +40,7 @@ def wait_for_db() -> None:
         port = os.environ.get("POSTGRES_PORT", "5432")
         print(f"Waiting for database at {host}:{port} ...", flush=True)
 
+    verbose = os.environ.get("WAIT_DB_VERBOSE", "0") == "1"
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             conn = _connect()
@@ -71,16 +49,10 @@ def wait_for_db() -> None:
             return
         except psycopg2.OperationalError as exc:
             if verbose:
-                print(
-                    f"  [{attempt}/{MAX_RETRIES}] Not ready yet: {exc}",
-                    flush=True,
-                )
+                print(f"  [{attempt}/{MAX_RETRIES}] {exc}", flush=True)
             time.sleep(1)
 
-    print(
-        f"ERROR: Database not ready after {MAX_RETRIES} attempts. Aborting.",
-        flush=True,
-    )
+    print(f"ERROR: Database not ready after {MAX_RETRIES} attempts.", flush=True)
     sys.exit(1)
 
 

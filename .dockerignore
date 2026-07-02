@@ -1,4 +1,4 @@
-# Repo-root build context (Railway). Local compose uses app/.dockerignore instead.
+# Build context: repository root (Railway + docker compose).
 
 .git/
 .github/

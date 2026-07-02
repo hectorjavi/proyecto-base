@@ -9,6 +9,8 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 DEBUG = False
 
+_RAILWAY_HOSTS = ("healthcheck.railway.app", "localhost", "127.0.0.1")
+
 _allowed_hosts = [
     host.strip()
     for host in os.environ.get("ALLOWED_HOSTS", "").split(",")
@@ -17,14 +19,7 @@ _allowed_hosts = [
 _railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
 if _railway_domain:
     _allowed_hosts.append(_railway_domain)
-# Railway probes use Host: healthcheck.railway.app (not *.up.railway.app).
-_allowed_hosts.extend(
-    [
-        "healthcheck.railway.app",
-        "localhost",
-        "127.0.0.1",
-    ]
-)
+_allowed_hosts.extend(_RAILWAY_HOSTS)
 ALLOWED_HOSTS = _allowed_hosts or [".up.railway.app"]
 
 CORS_ALLOW_ALL_ORIGINS = True

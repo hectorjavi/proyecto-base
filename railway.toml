@@ -1,13 +1,8 @@
 [build]
 builder = "DOCKERFILE"
-# Repo-root Dockerfile — build context is / (do not set Root Directory to app).
 dockerfilePath = "Dockerfile"
-buildCommand = ""
 
 [deploy]
-# Railway injects PORT automatically; the entrypoint reads it via ${PORT:-8000}.
-# Required variables: PRODUCTION=1, SECRET_KEY, DATABASE_URL=${{Postgres.DATABASE_URL}}
-# Do not set startCommand — an empty string breaks the entrypoint.
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

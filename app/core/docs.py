@@ -115,7 +115,7 @@ Error inesperado en el servidor. Revisar los logs del contenedor `web`.
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
-| GET | `/health/` | No | Liveness probe (Docker / CI) |
+| GET | `/health` | No | Liveness probe (also `/health/`) |
 | POST | `/api/auth/token/` | No | Login — obtener access y refresh token |
 | POST | `/api/auth/token/refresh/` | No | Renovar access token |
 | POST | `/api/auth/token/verify/` | No | Verificar validez de un token |

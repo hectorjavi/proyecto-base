@@ -26,8 +26,8 @@ admin_urls = [
 ]
 
 docs_urls = [
-    path("health", health.health, name="health-no-slash"),
-    path("health/", health.health, name="health"),
+    path("health", health.health, name="health"),
+    path("health/", health.health, name="health-slash"),
     path(
         "docs/",
         docs.schema_view.with_ui("swagger", cache_timeout=0),

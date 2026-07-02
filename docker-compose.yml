@@ -1,7 +1,7 @@
 services:
   web:
     build:
-      context: ./app
+      context: .
       dockerfile: Dockerfile
       target: dev
     init: true
@@ -24,6 +24,13 @@ services:
       - "8000:8000"
     env_file:
       - ./.env.dev
+    environment:
+      PRODUCTION: "0"
+      POSTGRES_HOST: web-db
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB_NAME: web_db
     depends_on:
       web-db:
         condition: service_healthy
@@ -31,7 +38,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/')\"",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\"",
         ]
       interval: 30s
       timeout: 5s

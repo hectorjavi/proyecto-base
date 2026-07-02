@@ -34,7 +34,7 @@ docker compose exec web python manage.py check
 - Collectstatic en dev: solo si `COLLECT_STATIC=1`
 - Dev volumes: opcional en `docker-compose.dev.yml` (no se auto-carga)
 - `wait_for_db.py` vive en `/usr/local/bin/` (no lo pisa el bind mount)
-- Docker build: compose usa target `dev`; Railway usa target `production`
+- Docker build: single `Dockerfile` at repo root — compose target `dev`, Railway target `production`
 - Windows: si el bind mount falla, habilita file sharing en Docker Desktop para la unidad del repo
 
 Ver skill `proyecto-base-docker` en `app/.agents/skills/` para detalle completo.
@@ -64,4 +64,4 @@ docker compose exec web black . --check
 docker compose exec web isort . --check-only
 ```
 
-CI: `.github/workflows/ci.yml` (flake8, black, isort, `manage.py check`, `GET /health/`).
+CI: `.github/workflows/ci.yml` (flake8, black, isort, `manage.py check`, `GET /health`).

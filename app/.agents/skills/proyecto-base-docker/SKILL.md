@@ -19,20 +19,20 @@ paths:
 
 | Path | Purpose |
 |---|---|
+| `Dockerfile` | Multi-stage at repo root: `dev` (compose) · `production` (Railway) |
 | `docker-compose.yml` | Local dev: `web` (Django) + `web-db` (Postgres 16) |
-| `app/Dockerfile` | Multi-stage: `dev` (compose) · `production` (Railway, default) |
 | `app/requirements/` | `base.txt` (runtime) · `dev.txt` (+ linters) · `prod.txt` |
-| `app/docker-entrypoint.sh` | Copiado a `/usr/local/bin/` en build |
-| `app/wait_for_db.py` | Copiado a `/usr/local/bin/` en build |
+| `app/docker-entrypoint.sh` | Installed to `/usr/local/bin/` at build |
+| `app/wait_for_db.py` | Installed to `/usr/local/bin/` at build |
 | `.env.dev` | Local secrets (copy from `.env.dev-exemple`) |
-| `railway.toml` | Production build from `app/Dockerfile` |
+| `railway.toml` | Railway: `Dockerfile` at repo root, healthcheck `/health` |
 
 ## Services (docker-compose)
 
 | Service | Image / build | Host port | Notes |
 |---|---|---|---|
-| `web` | `build: ./app` **target `dev`** | 8000 | Healthcheck `GET /health/` |
-| `web-db` | `postgres:16-bookworm` | 5436→5432 | Named volume `pgdata`, locales UTF-8 |
+| `web` | `context: .` **target `dev`** | 8000 | Healthcheck `GET /health` |
+| `web-db` | `postgres:16-bookworm` | 5436→5432 | Named volume `pgdata` |
 
 **Important:** `.env.dev` must use `POSTGRES_HOST=web-db` (Docker DNS service name).
 
@@ -67,55 +67,58 @@ docker compose down -v && docker compose up -d --build
 
 | Mode | Trigger | Image target | Behavior |
 |---|---|---|---|
-| Development | `PRODUCTION=0` | `dev` | `wait_for_db` → `migrate` → **gunicorn --reload** |
-| Production | `PRODUCTION=1` | `production` | `wait_for_db` → `migrate` → `collectstatic` → gunicorn |
+| Development | `POSTGRES_HOST` set (compose) | `dev` | `wait_for_db` → `migrate` → **gunicorn --reload** |
+| Production | no `POSTGRES_HOST` (Railway) | `production` | `wait_for_db` → `migrate` → `collectstatic` → gunicorn |
 
-**Collectstatic in dev:** skipped by default. Set `COLLECT_STATIC=1` to force it on startup.
+**Collectstatic in dev:** skipped by default. Set `COLLECT_STATIC=1` to force it.
 
-**Runtime user:** `appuser` (UID 1000) — no `chmod 777`.
+**Runtime user:** `appuser` (UID 1000).
 
 ## Volumes
 
 | Volume | Mount | Why |
 |---|---|---|
-| `./app/apps`, `core`, `utils`, `manage.py` | bind (`docker-compose.dev.yml` only) | Hot reload sin pisar scripts de runtime |
-| `staticfiles_data` → `/usr/src/app/staticfiles` | named | Evita conflictos con collectstatic |
-| `pgdata` → `/var/lib/postgresql/data` | named | Postgres persistente |
+| `./app/apps`, `core`, `utils`, `manage.py` | bind (`docker-compose.dev.yml` only) | Hot reload |
+| `staticfiles_data` → `/usr/src/app/staticfiles` | named | Avoid collectstatic conflicts |
+| `pgdata` → `/var/lib/postgresql/data` | named | Persistent Postgres |
 
-**Runtime fuera del bind mount:** `docker-entrypoint.sh` y `wait_for_db.py` están en `/usr/local/bin/`.
+Runtime scripts live in `/usr/local/bin/` (safe with bind mounts).
 
 ### Windows
 
-- **Por defecto** usa `docker compose up` (sin `docker-compose.dev.yml`).
-- Si necesitas hot reload: Docker Desktop → **File sharing** para la unidad del repo, luego el comando con `-f docker-compose.dev.yml`.
+- Default: `docker compose up` (no bind mount).
+- Hot reload: enable Docker Desktop **File sharing** for the repo drive, then use `docker-compose.dev.yml`.
 
 ## Healthcheck
 
-- **HTTP:** `GET /health/` → `{"status": "ok"}` (sin auth)
-- **Compose:** probe en `docker-compose.yml` cada 30s
-- **Production image:** `HEALTHCHECK` en Dockerfile target `production`
-- **CI:** GitHub Actions valida el endpoint tras levantar `web`
-
-## Expected logs (not errors)
-
-| Message | Meaning | Action |
-|---|---|---|
-| Postgres: `Skipping initialization` | Volume `pgdata` already has data | Normal on restarts; use `docker compose down -v` only to reset DB |
-| Postgres: `checkpoint complete` | Routine WAL maintenance | Hidden with `log_min_messages=warning` in compose |
-| Django: `development server` WARNING | Only if using `runserver` | Dev stack uses **gunicorn --reload** instead |
-| `No migrations to apply` | DB is up to date | Normal |
-
-Set `WAIT_DB_VERBOSE=1` in `.env.dev` to see every DB retry during startup.
+- **HTTP:** `GET /health` → `{"status": "ok"}` (also `/health/`)
+- **Compose / CI:** probe `/health`
+- **Railway:** `healthcheckPath = "/health"` in `railway.toml`; Host header `healthcheck.railway.app` allowed in `prod.py`
 
 ## Railway production
 
-- Set `PRODUCTION=1`, `SECRET_KEY`, Cloudinary vars, and `DATABASE_URL` (linked Postgres).
-- `railway.toml` builds `app/Dockerfile` **target `production`**; entrypoint handles migrate + gunicorn.
-- Do **not** use docker-compose in Railway; compose is local dev only.
+**Build (Settings → Build):**
+
+| Field | Value |
+|---|---|
+| Root Directory | *(empty)* |
+| Dockerfile Path | `Dockerfile` |
+
+**Required variables:**
+
+```
+PRODUCTION=1
+SECRET_KEY=<secure-key>
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+```
+
+Optional: Cloudinary vars. Do **not** set `POSTGRES_*` or `DATABASE` in Railway — use `DATABASE_URL` only.
+
+**Networking:** Generate Domain in Settings → Networking.
 
 ## When improving Docker here
 
 1. Load `docker-patterns` skill for generic best practices.
-2. Keep build context as `./app` (not repo root).
-3. Prefer `depends_on: condition: service_healthy` for `web-db`.
+2. Keep a single `Dockerfile` at repo root (`context: .`).
+3. Use `depends_on: condition: service_healthy` for `web-db`.
 4. Never commit `.env.dev` — only `.env.dev-exemple`.

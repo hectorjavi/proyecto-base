@@ -100,7 +100,7 @@ Todos los endpoints (excepto login y refresh) requieren header `Authorization: B
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
-| GET | `/health/` | No | Liveness probe |
+| GET | `/health` | No | Liveness probe (also `/health/`) |
 | POST | `/api/auth/token/` | No | Login — obtener access y refresh token |
 | POST | `/api/auth/token/refresh/` | No | Renovar access token |
 | POST | `/api/auth/token/verify/` | No | Verificar validez de un token |
@@ -269,7 +269,7 @@ Cada push/PR a `master` o `main` ejecuta `.github/workflows/ci.yml`:
 
 - `flake8`, `black --check`, `isort --check-only`
 - `python manage.py check` y `migrate`
-- Probe HTTP a `GET /health/`
+- Probe HTTP a `GET /health`
 
 Reproduce localmente:
 
@@ -287,44 +287,29 @@ docker compose run --rm --no-deps --entrypoint python web manage.py check
 
 ## Despliegue en producción (Railway)
 
-El entorno de producción se configura mediante la variable `PRODUCTION=1`. Railway construye la imagen con **target `production`** (sin linters). La configuración de producción (`core/settings/prod.py`) activa:
+Railway construye el `Dockerfile` de la raíz (target `production`). Producción usa `core/settings/prod.py`:
 
 - `DEBUG=False`
-- Almacenamiento de archivos en **Cloudinary**
-- Archivos estáticos servidos con **WhiteNoise**
-- Cookies seguras (HTTPS)
-- CORS habilitado
-- Base de datos vía `DATABASE_URL` (inyectada por Railway al vincular Postgres)
+- Archivos en **Cloudinary**, estáticos con **WhiteNoise**
+- Base de datos vía `DATABASE_URL` (Postgres vinculado)
+- `healthcheck.railway.app` permitido en `ALLOWED_HOSTS`
 
-### Configuración de build en Railway (importante)
+### Railway — configuración mínima
 
-El log debe mostrar `load build definition from Dockerfile` (raíz del repo), **no** `app/Dockerfile`.
+**Build:** Root Directory vacío · Dockerfile Path = `Dockerfile`
 
-En **Settings → Build** del servicio web:
+**Variables:**
 
-| Campo | Valor correcto |
+| Variable | Valor |
 |---|---|
-| Root Directory | *(vacío)* |
-| Dockerfile Path | `Dockerfile` |
+| `PRODUCTION` | `1` |
+| `SECRET_KEY` | clave segura |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+| `CLOUDINARY_*` | si usas media |
 
-Si el dashboard sigue usando `app/Dockerfile`, el build falla con `requirements/base.txt not found`.
+No uses `POSTGRES_*` ni `DATABASE` en Railway (son de desarrollo local).
 
-**Alternativa válida** (si prefieres el Dockerfile dentro de `app/`):
-
-| Campo | Valor |
-|---|---|
-| Root Directory | `app` |
-| Dockerfile Path | `Dockerfile` |
-
-Elimina la variable `RAILWAY_DOCKERFILE_PATH` si existe y apunta a `app/Dockerfile`.
-
-Variables requeridas: `PRODUCTION=1`, `SECRET_KEY`, `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
-
-### Networking y healthcheck
-
-1. **Generate Domain** en **Settings → Networking** (el servicio no debe quedar como "Unexposed").
-2. Railway hace healthcheck con `Host: healthcheck.railway.app` — ya está en `ALLOWED_HOSTS` de `prod.py`.
-3. El path de healthcheck es `/health` (configurado en `railway.toml`).
+**Networking:** Generate Domain → probar `https://<tu-app>.up.railway.app/health`
 
 ---
 
