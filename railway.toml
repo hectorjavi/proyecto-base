@@ -1,7 +1,7 @@
 [build]
 builder = "DOCKERFILE"
-# Build context must be app/ — set Root Directory = app in Railway service settings.
-dockerfilePath = "app/Dockerfile"
+# Repo-root Dockerfile — build context is / (do not set Root Directory to app).
+dockerfilePath = "Dockerfile"
 buildCommand = ""
 
 [deploy]
