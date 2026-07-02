@@ -1,27 +1,64 @@
-version: '3.8'
-
 services:
   web:
     build:
       context: ./app
       dockerfile: Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - ./app:/usr/src/app
+      target: dev
+    init: true
+    command:
+      - gunicorn
+      - core.wsgi:application
+      - --bind
+      - 0.0.0.0:8000
+      - --reload
+      - --log-level
+      - info
+      - --access-logfile
+      - "-"
+      - --error-logfile
+      - "-"
+      - --env
+      - DJANGO_SETTINGS_MODULE=core.settings.local
+    working_dir: /usr/src/app
     ports:
       - "8000:8000"
     env_file:
       - ./.env.dev
     depends_on:
-      - web-db
+      web-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/')\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    restart: unless-stopped
 
   web-db:
-    build:
-      context: ./db
-      dockerfile: Dockerfile
+    image: postgres:16-bookworm
     ports:
       - "5436:5432"
+    command: ["postgres", "-c", "log_min_messages=warning"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: web_db
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d web_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  pgdata:

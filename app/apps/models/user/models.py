@@ -79,5 +79,5 @@ class User(AbstractUser, UUIDModel, TimeStampedModel):
         return f"{self.first_name} {self.paternal_last_name} {self.maternal_last_name}"
 
     class Meta:
-        verbose_name = 'User record'
+        verbose_name = "User record"
         verbose_name_plural = "User records"

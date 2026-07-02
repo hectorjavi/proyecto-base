@@ -1,6 +1,8 @@
 [build]
 builder = "dockerfile"
 dockerfilePath = "app/Dockerfile"
+# Production stage — no dev linters in the deployed image.
+dockerfileTarget = "production"
 buildCommand = ""
 
 [deploy]

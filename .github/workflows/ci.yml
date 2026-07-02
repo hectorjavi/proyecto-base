@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare environment file
+        run: cp .env.dev-exemple .env.dev
+
+      - name: Build dev image
+        run: docker compose build web
+
+      - name: Start Postgres
+        run: docker compose up -d web-db
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            docker compose exec -T web-db pg_isready -U postgres -d web_db && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Flake8
+        run: docker compose run --rm --no-deps --entrypoint flake8 web .
+
+      - name: Black
+        run: docker compose run --rm --no-deps --entrypoint black web . --check
+
+      - name: isort
+        run: docker compose run --rm --no-deps --entrypoint isort web . --check-only
+
+      - name: Django check
+        run: docker compose run --rm --no-deps --entrypoint python web manage.py check
+
+      - name: Apply migrations (smoke)
+        run: docker compose run --rm --no-deps --entrypoint python web manage.py migrate --no-input
+
+      - name: Start web and health probe
+        run: |
+          docker compose up -d web
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8000/health/ && exit 0
+            sleep 2
+          done
+          docker compose logs web
+          exit 1

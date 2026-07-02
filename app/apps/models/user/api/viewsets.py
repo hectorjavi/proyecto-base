@@ -43,9 +43,15 @@ _user_list_item_schema = openapi.Schema(
         "address": openapi.Schema(type=openapi.TYPE_STRING),
         "accepted_terms": openapi.Schema(type=openapi.TYPE_BOOLEAN),
         "is_active": openapi.Schema(type=openapi.TYPE_BOOLEAN),
-        "created": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
-        "modified": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
-        "groups": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+        "created": openapi.Schema(
+            type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME
+        ),
+        "modified": openapi.Schema(
+            type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME
+        ),
+        "groups": openapi.Schema(
+            type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)
+        ),
         "user_permissions": openapi.Schema(
             type=openapi.TYPE_ARRAY,
             items=openapi.Schema(type=openapi.TYPE_OBJECT),

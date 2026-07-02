@@ -1,0 +1,26 @@
+Django==5.2.3
+psycopg2-binary==2.9.10
+gunicorn==23.0.0
+uvicorn==0.32.1
+whitenoise==6.9.0
+
+# REST framework
+djangorestframework==3.16.0
+djangorestframework-simplejwt==5.5.1
+drf-yasg==1.21.15
+django-filter==25.1
+django-cors-headers==4.6.0
+
+# Models & utils
+django-model-utils==5.0.0
+dj-database-url==2.3.0
+
+# Storage (Cloudinary)
+cloudinary==1.44.1
+django-cloudinary-storage==0.3.0
+
+# Security
+cryptography==44.0.2
+
+# Backup
+django-dbbackup==5.2.0

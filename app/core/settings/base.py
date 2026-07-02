@@ -31,11 +31,6 @@ BASE_APPS = [
 
 LOCAL_APPS = [
     "apps.models.user",
-    "apps.models.image",
-    "apps.models.tag",
-    "apps.models.image_tag",
-    "apps.models.reward",
-    "apps.models.models_detectors",
 ]
 
 THIRD_APPS = [

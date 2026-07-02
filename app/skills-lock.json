@@ -18,6 +18,18 @@
       "sourceType": "github",
       "skillPath": "plugins/django-safe-migration/skills/django-safe-migration/SKILL.md",
       "computedHash": "d878022f8bd9cc70922065e3f225f2d4134b6ac932b34c65d1a0d1e6a32d9ad1"
+    },
+    "docker-patterns": {
+      "source": "Akindu23/my-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/docker-patterns/SKILL.md",
+      "computedHash": "723674bb5c8ae1ba6f775c9e6abb11f8a41d61d85ca963dd094f7e3f3fe96981"
+    },
+    "proyecto-base-docker": {
+      "source": "local",
+      "sourceType": "project",
+      "skillPath": ".agents/skills/proyecto-base-docker/SKILL.md",
+      "computedHash": "a7943dcb8793785814402cbb59d7dcef8c8c7fc687f5b5fd0f042a989ee782ac"
     }
   }
 }

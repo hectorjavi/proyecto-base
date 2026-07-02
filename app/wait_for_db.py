@@ -37,6 +37,7 @@ def _connect():
 
 
 def wait_for_db() -> None:
+    verbose = os.environ.get("WAIT_DB_VERBOSE", "0") == "1"
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
         # Mask credentials for safe logging
@@ -54,7 +55,11 @@ def wait_for_db() -> None:
             print("Database is ready.", flush=True)
             return
         except psycopg2.OperationalError as exc:
-            print(f"  [{attempt}/{MAX_RETRIES}] Not ready yet: {exc}", flush=True)
+            if verbose:
+                print(
+                    f"  [{attempt}/{MAX_RETRIES}] Not ready yet: {exc}",
+                    flush=True,
+                )
             time.sleep(1)
 
     print(

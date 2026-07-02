@@ -14,7 +14,6 @@ from rest_framework_simplejwt.views import (
 )
 
 from apps.models.user.api.serializers import UserSerializer
-from apps.models.user.models import User
 from core.swagger_schemas import (
     r400_validation,
     r401_bad_credentials,

@@ -19,13 +19,14 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from . import docs
+from . import docs, health
 
 admin_urls = [
     path("admin/", admin.site.urls),
 ]
 
 docs_urls = [
+    path("health/", health.health, name="health"),
     path(
         "docs/",
         docs.schema_view.with_ui("swagger", cache_timeout=0),

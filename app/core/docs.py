@@ -115,6 +115,7 @@ Error inesperado en el servidor. Revisar los logs del contenedor `web`.
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
+| GET | `/health/` | No | Liveness probe (Docker / CI) |
 | POST | `/api/auth/token/` | No | Login — obtener access y refresh token |
 | POST | `/api/auth/token/refresh/` | No | Renovar access token |
 | POST | `/api/auth/token/verify/` | No | Verificar validez de un token |
@@ -122,15 +123,12 @@ Error inesperado en el servidor. Revisar los logs del contenedor `web`.
 | GET | `/api/auth/me/` | Sí | Obtener perfil del usuario autenticado |
 | PATCH | `/api/auth/me/` | Sí | Actualizar perfil propio |
 | POST | `/api/auth/me/reset_password/` | Sí | Cambiar contraseña |
-| GET | `/api/images/` | Sí | Listar imágenes propias (paginado) |
-| POST | `/api/images/` | Sí | Subir imagen (multipart/form-data) |
-| POST | `/api/images/upload-base64/` | Sí | Subir imagen en base64 |
-| GET | `/api/images/{id}/` | Sí | Obtener detalle de una imagen |
-| PUT | `/api/images/{id}/` | Sí | Actualizar imagen (completo) |
-| PATCH | `/api/images/{id}/` | Sí | Actualizar imagen (parcial) |
-| DELETE | `/api/images/{id}/` | Sí | Eliminar imagen y archivo en storage |
-| GET | `/api/tags/` | Sí | Listar etiquetas en árbol (solo raíces) |
-| GET | `/api/tags/{id}/` | Sí | Obtener una etiqueta con su subárbol |
+| GET | `/api/users/` | Sí | Listar usuarios (paginado) |
+| POST | `/api/users/` | Sí | Crear usuario |
+| GET | `/api/users/{id}/` | Sí | Obtener detalle de un usuario |
+| PUT | `/api/users/{id}/` | Sí | Actualizar usuario (completo) |
+| PATCH | `/api/users/{id}/` | Sí | Actualizar usuario (parcial) |
+| DELETE | `/api/users/{id}/` | Sí | Eliminar usuario |
 
 ---
 

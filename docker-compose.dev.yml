@@ -1,0 +1,20 @@
+# Hot reload for local development (optional — do NOT auto-load as override).
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Mounts only source trees — runtime scripts stay in the image (/usr/local/bin).
+# On Windows: enable Docker Desktop file sharing for the repo drive, or use
+# plain `docker compose up` (rebuild after code changes).
+
+services:
+  web:
+    volumes:
+      - ./app/apps:/usr/src/app/apps
+      - ./app/core:/usr/src/app/core
+      - ./app/utils:/usr/src/app/utils
+      - ./app/manage.py:/usr/src/app/manage.py
+      - staticfiles_data:/usr/src/app/staticfiles
+
+volumes:
+  staticfiles_data:
